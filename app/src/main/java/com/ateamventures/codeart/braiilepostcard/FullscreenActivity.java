@@ -18,6 +18,8 @@ import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.WindowManager;
+import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.TextView;
@@ -31,54 +33,9 @@ import java.util.Set;
  * status bar and navigation/system bar) with user interaction.
  */
 public class FullscreenActivity extends AppCompatActivity {
-    /**
-     * Whether or not the system UI should be auto-hidden after
-     * {@link #AUTO_HIDE_DELAY_MILLIS} milliseconds.
-     */
-    private static final boolean AUTO_HIDE = true;
 
-    /**
-     * If {@link #AUTO_HIDE} is set, the number of milliseconds to wait after
-     * user interaction before hiding the system UI.
-     */
-    private static final int AUTO_HIDE_DELAY_MILLIS = 3000;
 
-    /**
-     * Some older devices needs a small delay between UI widget updates
-     * and a change of the status and navigation bar.
-     */
-    private static final int UI_ANIMATION_DELAY = 300;
-    private final Handler mHideHandler = new Handler();
     private View mContentView;
-    private final Runnable mHidePart2Runnable = new Runnable() {
-        @SuppressLint("InlinedApi")
-        @Override
-        public void run() {
-            // Delayed removal of status and navigation bar
-
-            // Note that some of these constants are new as of API 16 (Jelly Bean)
-            // and API 19 (KitKat). It is safe to use them, as they are inlined
-            // at compile-time and do nothing on earlier devices.
-            mContentView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LOW_PROFILE
-                    | View.SYSTEM_UI_FLAG_FULLSCREEN
-                    | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                    | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                    | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                    | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION);
-        }
-    };
-    private View mControlsView;
-    private final Runnable mShowPart2Runnable = new Runnable() {
-        @Override
-        public void run() {
-            // Delayed display of UI elements
-            ActionBar actionBar = getSupportActionBar();
-            if (actionBar != null) {
-                //actionBar.show();
-            }
-            mControlsView.setVisibility(View.VISIBLE);
-        }
-    };
 
 
     //<-------------------------------------------------------------------------------------------
@@ -140,7 +97,6 @@ public class FullscreenActivity extends AppCompatActivity {
             switch (msg.what) {
                 case UsbService.MESSAGE_FROM_SERIAL_PORT:
                     String data = (String) msg.obj;
-                    //mActivity.get().display.append(data);
                     break;
                 case UsbService.CTS_CHANGE:
                     Toast.makeText(mActivity.get(), "CTS_CHANGE",Toast.LENGTH_LONG).show();
@@ -150,7 +106,7 @@ public class FullscreenActivity extends AppCompatActivity {
                     break;
                 case UsbService.SYNC_READ:
                     String buffer = (String) msg.obj;
-                    //mActivity.get().display.append(buffer);
+                    Toast.makeText(mActivity.get(), buffer, Toast.LENGTH_SHORT).show();
                     break;
             }
         }
@@ -185,20 +141,17 @@ public class FullscreenActivity extends AppCompatActivity {
     
     private EditText mPlainText;
     private EditText mBraille;
+    private Button mSendButton;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.activity_fullscreen);
 
-        getSupportActionBar().hide();
-
         mContentView = findViewById(R.id.fullscreen_content);
-
-        mHandler = new MyHandler(this);
-
         mBraille = (EditText) findViewById(R.id.Braille);
         mPlainText = (EditText) findViewById(R.id.PlainText);
+        mSendButton = (Button) findViewById(R.id.sendButton);
 
         Typeface type = Typeface.createFromAsset(getAssets(),"fonts/Sheets_Braille.ttf");
         mBraille.setTypeface(type);
@@ -220,6 +173,17 @@ public class FullscreenActivity extends AppCompatActivity {
             }
         });
 
+
+        mSendButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                usbService.write("Hello".getBytes());
+                BrailleRequest test = new BrailleRequest();
+                test.sendRequsest("http://localhost:8080/hello");
+            }
+        });
+
+        mHandler = new MyHandler(this);
     }
 
     @Override
@@ -227,8 +191,14 @@ public class FullscreenActivity extends AppCompatActivity {
         super.onResume();
         setFilters();  // Start listening notifications from UsbService
         startService(UsbService.class, usbConnection, null); // Start UsbService(if it was not started before) and Bind it
-        getSupportActionBar().hide();
-
+        View decorView = getWindow().getDecorView();
+        // Hide both the navigation bar and the status bar.
+        // SYSTEM_UI_FLAG_FULLSCREEN is only available on Android 4.1 and higher, but as
+        // a general rule, you should design your app to hide the status bar whenever you
+        // hide the navigation bar.
+        int uiOptions = View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                | View.SYSTEM_UI_FLAG_FULLSCREEN;
+        decorView.setSystemUiVisibility(uiOptions);
     }
 
     @Override
@@ -241,7 +211,6 @@ public class FullscreenActivity extends AppCompatActivity {
     @Override
     protected void onPostCreate(Bundle savedInstanceState) {
         super.onPostCreate(savedInstanceState);
-
         // Trigger the initial hide() shortly after the activity has been
         // created, to briefly hint to the user that UI controls
         // are available.

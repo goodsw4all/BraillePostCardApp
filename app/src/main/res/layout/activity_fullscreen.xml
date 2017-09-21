@@ -53,10 +53,25 @@
                 android:ems="10"
                 android:inputType="textMultiLine"
                 android:text=""
-                android:textSize="40sp" />
+                android:textColor="@android:color/black"
+                android:textSize="40sp"
+                android:textStyle="bold" />
 
         </LinearLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="horizontal">
 
+            <Button
+                android:id="@+id/sendButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Button" />
+
+        </LinearLayout>
 
 
     </LinearLayout>
