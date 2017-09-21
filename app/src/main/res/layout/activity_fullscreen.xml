@@ -1,8 +1,9 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#0099cc"
+    android:background="@color/colorPrimaryDark"
     tools:context="com.ateamventures.codeart.braiilepostcard.FullscreenActivity">
 
     <!-- The primary full-screen view. This can be replaced with whatever view
@@ -17,11 +18,9 @@
             android:id="@+id/fullscreen_content"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:gravity="bottom|center"
+            android:gravity="top|center"
             android:keepScreenOn="true"
             android:text="@string/dummy_content"
-            android:textColor="#33b5e5"
             android:textSize="100sp"
             android:textStyle="bold" />
 
@@ -29,7 +28,7 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
+            android:layout_weight="0.95"
             android:orientation="horizontal">
 
             <EditText
@@ -37,10 +36,12 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:layout_marginLeft="40sp"
+                android:layout_marginRight="20sp"
                 android:layout_weight="1"
+                android:cursorVisible="true"
                 android:ems="10"
                 android:inputType="textMultiLine"
-                android:paddingLeft="10dp"
+                android:maxLines="5"
                 android:text=""
                 android:textSize="40sp" />
 
@@ -48,28 +49,87 @@
                 android:id="@+id/Braille"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:layout_marginLeft="40sp"
+                android:layout_marginLeft="20sp"
+                android:layout_marginRight="40sp"
                 android:layout_weight="1"
+                android:cursorVisible="false"
+                android:editable="true"
                 android:ems="10"
+                android:enabled="false"
                 android:inputType="textMultiLine"
                 android:text=""
                 android:textColor="@android:color/black"
+                android:textIsSelectable="false"
                 android:textSize="40sp"
                 android:textStyle="bold" />
 
         </LinearLayout>
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
+            android:layout_weight="0.13"
             android:orientation="horizontal">
 
-            <Button
-                android:id="@+id/sendButton"
+            <Space
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Button" />
+                android:layout_weight="1" />
+
+            <com.dd.CircularProgressButton
+                android:id="@+id/sendButton"
+                android:layout_width="196dp"
+                android:layout_height="64dp"
+                android:layout_marginTop="16dp"
+                android:background="@android:color/darker_gray"
+                android:textColor="@color/cpb_white"
+                android:textSize="18sp"
+                app:cpb_cornerRadius="48dp"
+                app:cpb_iconComplete="@drawable/ic_action_accept"
+                app:cpb_textComplete="@string/Complete"
+                app:cpb_textError="@string/Error"
+                app:cpb_textIdle="SEND" />
+
+            <Space
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1" />
+
+            <com.dd.CircularProgressButton
+                android:id="@+id/downloadButton"
+                android:layout_width="196dp"
+                android:layout_height="64dp"
+                android:layout_marginTop="16dp"
+                android:background="@android:color/darker_gray"
+                android:textColor="@color/cpb_white"
+                android:textSize="18sp"
+                app:cpb_cornerRadius="48dp"
+                app:cpb_textComplete="@string/Complete"
+                app:cpb_textError="@string/Error"
+                app:cpb_textIdle="Download" />
+
+            <Space
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1" />
+
+            <com.dd.CircularProgressButton
+                android:id="@+id/printButton"
+                android:layout_width="196dp"
+                android:layout_height="64dp"
+                android:layout_marginTop="16dp"
+                android:background="@android:color/darker_gray"
+                android:textColor="@color/cpb_white"
+                android:textSize="18sp"
+                app:cpb_cornerRadius="48dp"
+                app:cpb_textComplete="@string/Complete"
+                app:cpb_textError="@string/Error"
+                app:cpb_textIdle="PRINT" />
+
+            <Space
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1" />
 
         </LinearLayout>
 

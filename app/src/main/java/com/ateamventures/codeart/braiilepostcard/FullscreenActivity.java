@@ -7,6 +7,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
+import android.graphics.Color;
 import android.graphics.Typeface;
 import android.os.IBinder;
 import android.os.Message;
@@ -25,6 +26,8 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.dd.CircularProgressButton;
+
 import java.lang.ref.WeakReference;
 import java.util.Set;
 
@@ -37,7 +40,7 @@ public class FullscreenActivity extends AppCompatActivity {
     private View mDecorView;
     private EditText mPlainText;
     private EditText mBraille;
-    private Button mSendButton;
+    private CircularProgressButton mSendButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -55,7 +58,8 @@ public class FullscreenActivity extends AppCompatActivity {
 
         mBraille = (EditText) findViewById(R.id.Braille);
         mPlainText = (EditText) findViewById(R.id.PlainText);
-        mSendButton = (Button) findViewById(R.id.sendButton);
+        mSendButton = (CircularProgressButton) findViewById(R.id.sendButton);
+        mSendButton.setIndeterminateProgressMode(true);
 
         Typeface type = Typeface.createFromAsset(getAssets(),"fonts/Sheets_Braille.ttf");
         mBraille.setTypeface(type);
@@ -77,13 +81,21 @@ public class FullscreenActivity extends AppCompatActivity {
             }
         });
 
-
         mSendButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 usbService.write("Hello".getBytes());
+
                 BrailleRequest test = new BrailleRequest();
                 test.sendRequsest("http://localhost:8080/hello");
+
+                if (mSendButton.getProgress() == 0) {
+                    mSendButton.setProgress(100);
+                } else if (mSendButton.getProgress() == -1) {
+                    mSendButton.setProgress(0);
+                } else {
+                    mSendButton.setProgress(-1);
+                }
             }
         });
 

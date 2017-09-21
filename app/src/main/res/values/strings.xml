@@ -3,4 +3,8 @@
 
     <string name="dummy_button">Dummy Button</string>
     <string name="dummy_content">Braille Postcard</string>
+    <string name="Complete">OK</string>
+    <string name="Error">Error</string>
+    <string name="Idle">Idle</string>
+
 </resources>
