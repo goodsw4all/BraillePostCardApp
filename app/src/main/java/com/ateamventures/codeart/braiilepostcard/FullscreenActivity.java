@@ -34,9 +34,86 @@ import java.util.Set;
  */
 public class FullscreenActivity extends AppCompatActivity {
 
+    private View mDecorView;
+    private EditText mPlainText;
+    private EditText mBraille;
+    private Button mSendButton;
 
-    private View mContentView;
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_fullscreen);
 
+        mDecorView = getWindow().getDecorView();
+        mDecorView.setSystemUiVisibility(
+                View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                        | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                        | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                        | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION // hide nav bar
+                        | View.SYSTEM_UI_FLAG_FULLSCREEN );// hide status bar
+                        //| View.SYSTEM_UI_FLAG_IMMERSIVE);
+
+        mBraille = (EditText) findViewById(R.id.Braille);
+        mPlainText = (EditText) findViewById(R.id.PlainText);
+        mSendButton = (Button) findViewById(R.id.sendButton);
+
+        Typeface type = Typeface.createFromAsset(getAssets(),"fonts/Sheets_Braille.ttf");
+        mBraille.setTypeface(type);
+
+        mPlainText.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+
+            }
+
+            @Override
+            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+                mBraille.setText(mPlainText.getText());
+            }
+
+            @Override
+            public void afterTextChanged(Editable editable) {
+
+            }
+        });
+
+
+        mSendButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                usbService.write("Hello".getBytes());
+                BrailleRequest test = new BrailleRequest();
+                test.sendRequsest("http://localhost:8080/hello");
+            }
+        });
+
+        mHandler = new MyHandler(this);
+    }
+
+
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        setFilters();  // Start listening notifications from UsbService
+        startService(UsbService.class, usbConnection, null); // Start UsbService(if it was not started before) and Bind it
+
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        unregisterReceiver(mUsbReceiver);
+        unbindService(usbConnection);
+    }
+
+    @Override
+    protected void onPostCreate(Bundle savedInstanceState) {
+        super.onPostCreate(savedInstanceState);
+        // Trigger the initial hide() shortly after the activity has been
+        // created, to briefly hint to the user that UI controls
+        // are available.
+    }
 
     //<-------------------------------------------------------------------------------------------
 
@@ -65,7 +142,7 @@ public class FullscreenActivity extends AppCompatActivity {
             }
         }
     };
-    
+
     private UsbService usbService;
     private MyHandler mHandler;
 
@@ -138,82 +215,4 @@ public class FullscreenActivity extends AppCompatActivity {
         registerReceiver(mUsbReceiver, filter);
     }
     //------------------------------------------------------------------------------------------->
-    
-    private EditText mPlainText;
-    private EditText mBraille;
-    private Button mSendButton;
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-
-        setContentView(R.layout.activity_fullscreen);
-
-        mContentView = findViewById(R.id.fullscreen_content);
-        mBraille = (EditText) findViewById(R.id.Braille);
-        mPlainText = (EditText) findViewById(R.id.PlainText);
-        mSendButton = (Button) findViewById(R.id.sendButton);
-
-        Typeface type = Typeface.createFromAsset(getAssets(),"fonts/Sheets_Braille.ttf");
-        mBraille.setTypeface(type);
-
-        mPlainText.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-
-            }
-
-            @Override
-            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-                mBraille.setText(mPlainText.getText());
-            }
-
-            @Override
-            public void afterTextChanged(Editable editable) {
-
-            }
-        });
-
-
-        mSendButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                usbService.write("Hello".getBytes());
-                BrailleRequest test = new BrailleRequest();
-                test.sendRequsest("http://localhost:8080/hello");
-            }
-        });
-
-        mHandler = new MyHandler(this);
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        setFilters();  // Start listening notifications from UsbService
-        startService(UsbService.class, usbConnection, null); // Start UsbService(if it was not started before) and Bind it
-        View decorView = getWindow().getDecorView();
-        // Hide both the navigation bar and the status bar.
-        // SYSTEM_UI_FLAG_FULLSCREEN is only available on Android 4.1 and higher, but as
-        // a general rule, you should design your app to hide the status bar whenever you
-        // hide the navigation bar.
-        int uiOptions = View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                | View.SYSTEM_UI_FLAG_FULLSCREEN;
-        decorView.setSystemUiVisibility(uiOptions);
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        unregisterReceiver(mUsbReceiver);
-        unbindService(usbConnection);
-    }
-
-    @Override
-    protected void onPostCreate(Bundle savedInstanceState) {
-        super.onPostCreate(savedInstanceState);
-        // Trigger the initial hide() shortly after the activity has been
-        // created, to briefly hint to the user that UI controls
-        // are available.
-    }
-
 }
