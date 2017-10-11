@@ -73,7 +73,7 @@ public class BrailleRequest {
             String rawString = "{\n" +
                     "  \"title\": \"Hello Braille Postcard Project\",\n" +
                     "  \"from\": {\n" +
-                    "    \"name\": \"codeart\",\n" +
+                    "    \"name\": \"Justin\",\n" +
                     "    \"address\": \"heaven\"\n" +
                     "  },\n" +
                     "  \"to\": {\n" +
