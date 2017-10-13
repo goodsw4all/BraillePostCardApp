@@ -63,12 +63,14 @@ public class BrailleRequest {
             url = new URL(urlString);
             connection = (HttpURLConnection)url.openConnection();
             connection.setRequestMethod("POST");
-            connection.setRequestProperty("Content-Type",
-                    "application/json");
+            connection.setRequestProperty("Content-Type", "application/json");
+            connection.setConnectTimeout(1500);
 
             connection.setUseCaches (false);
             connection.setDoInput(true);
             connection.setDoOutput(true);
+
+            String message = "\"message\": [\"i\", \"test\", \"you\"],\n";
 
             String rawString = "{\n" +
                     "  \"title\": \"Hello Braille Postcard Project\",\n" +
@@ -80,7 +82,7 @@ public class BrailleRequest {
                     "    \"name\": \"you\",\n" +
                     "    \"address\": \"happy world\"\n" +
                     "  },\n" +
-                    "  \"message\": [\"i\", \"love\", \"you\"],\n" +
+                    message +
                     "  \"number\": 123,\n" +
                     "  \"object\": {\n" +
                     "    \"a\": \"b\",\n" +

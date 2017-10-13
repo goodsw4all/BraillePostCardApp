@@ -17,6 +17,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
@@ -41,25 +42,31 @@ public class FullscreenActivity extends AppCompatActivity {
     private EditText mPlainText;
     private EditText mBraille;
     private CircularProgressButton mSendButton;
+    private CircularProgressButton mDownButton;
+    static final String TAG = "MW";
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                WindowManager.LayoutParams.FLAG_FULLSCREEN);
         setContentView(R.layout.activity_fullscreen);
 
         mDecorView = getWindow().getDecorView();
         mDecorView.setSystemUiVisibility(
-                View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                        | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                        | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                        View.SYSTEM_UI_FLAG_FULLSCREEN
                         | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION // hide nav bar
-                        | View.SYSTEM_UI_FLAG_FULLSCREEN );// hide status bar
+                        | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
                         //| View.SYSTEM_UI_FLAG_IMMERSIVE);
 
         mBraille = (EditText) findViewById(R.id.Braille);
         mPlainText = (EditText) findViewById(R.id.PlainText);
         mSendButton = (CircularProgressButton) findViewById(R.id.sendButton);
         mSendButton.setIndeterminateProgressMode(true);
+
+        mDownButton = (CircularProgressButton) findViewById(R.id.downloadButton);
+        mDownButton.setIndeterminateProgressMode(true);
 
         Typeface type = Typeface.createFromAsset(getAssets(),"fonts/Sheets_Braille.ttf");
         mBraille.setTypeface(type);
@@ -96,6 +103,16 @@ public class FullscreenActivity extends AppCompatActivity {
                 } else {
                     mSendButton.setProgress(-1);
                 }
+            }
+        });
+
+        mDownButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                usbService.write("\n".getBytes());
+
+                mDownButton.setProgress(100);
+
             }
         });
 
@@ -175,6 +192,7 @@ public class FullscreenActivity extends AppCompatActivity {
      * This handler will be passed to UsbService. Data received from serial port is displayed through this handler
      */
     private static class MyHandler extends Handler {
+
         private final WeakReference<FullscreenActivity> mActivity;
 
         public MyHandler(FullscreenActivity activity) {
@@ -195,7 +213,7 @@ public class FullscreenActivity extends AppCompatActivity {
                     break;
                 case UsbService.SYNC_READ:
                     String buffer = (String) msg.obj;
-                    Toast.makeText(mActivity.get(), buffer, Toast.LENGTH_SHORT).show();
+                    Log.d(TAG, "handleMessage: " + buffer);
                     break;
             }
         }
