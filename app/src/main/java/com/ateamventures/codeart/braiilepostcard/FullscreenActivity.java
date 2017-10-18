@@ -1,30 +1,22 @@
 package com.ateamventures.codeart.braiilepostcard;
 
-import android.annotation.SuppressLint;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
-import android.graphics.Color;
 import android.graphics.Typeface;
 import android.os.IBinder;
 import android.os.Message;
-import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.os.Handler;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
-import android.view.MotionEvent;
 import android.view.View;
-import android.view.WindowManager;
-import android.widget.Button;
-import android.widget.CheckBox;
 import android.widget.EditText;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import com.dd.CircularProgressButton;
@@ -45,20 +37,18 @@ public class FullscreenActivity extends AppCompatActivity {
     private CircularProgressButton mDownButton;
     static final String TAG = "MW";
 
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
-                WindowManager.LayoutParams.FLAG_FULLSCREEN);
+//        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
+//                WindowManager.LayoutParams.FLAG_FULLSCREEN);
         setContentView(R.layout.activity_fullscreen);
 
         mDecorView = getWindow().getDecorView();
         mDecorView.setSystemUiVisibility(
                         View.SYSTEM_UI_FLAG_FULLSCREEN
-                        | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION // hide nav bar
+                        | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
                         | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
-                        //| View.SYSTEM_UI_FLAG_IMMERSIVE);
 
         mBraille = (EditText) findViewById(R.id.Braille);
         mPlainText = (EditText) findViewById(R.id.PlainText);
@@ -109,10 +99,11 @@ public class FullscreenActivity extends AppCompatActivity {
         mDownButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                usbService.write("\n".getBytes());
+                usbService.write("M105\n".getBytes());
+                usbService.write("M105\n".getBytes());
 
+                gcodeReader.startGCodeReadThread();
                 mDownButton.setProgress(100);
-
             }
         });
 
@@ -172,8 +163,10 @@ public class FullscreenActivity extends AppCompatActivity {
         }
     };
 
-    private UsbService usbService;
+    private static UsbService usbService;
     private MyHandler mHandler;
+
+    private static GCodeReader gcodeReader = new GCodeReader("Download/braillePostCard.gcode");
 
     private final ServiceConnection usbConnection = new ServiceConnection() {
         @Override
@@ -194,6 +187,7 @@ public class FullscreenActivity extends AppCompatActivity {
     private static class MyHandler extends Handler {
 
         private final WeakReference<FullscreenActivity> mActivity;
+        private String temp = "";
 
         public MyHandler(FullscreenActivity activity) {
             mActivity = new WeakReference<>(activity);
@@ -204,16 +198,47 @@ public class FullscreenActivity extends AppCompatActivity {
             switch (msg.what) {
                 case UsbService.MESSAGE_FROM_SERIAL_PORT:
                     String data = (String) msg.obj;
+                    Log.d(TAG, "handleMessage: " + data);
                     break;
+
                 case UsbService.CTS_CHANGE:
                     Toast.makeText(mActivity.get(), "CTS_CHANGE",Toast.LENGTH_LONG).show();
                     break;
+
                 case UsbService.DSR_CHANGE:
                     Toast.makeText(mActivity.get(), "DSR_CHANGE",Toast.LENGTH_LONG).show();
                     break;
+
                 case UsbService.SYNC_READ:
                     String buffer = (String) msg.obj;
-                    Log.d(TAG, "handleMessage: " + buffer);
+
+                    temp += buffer;
+
+                    if (temp.charAt(temp.length()-1) != '\n') {
+                        Log.d(TAG, "handleMessage: temp " + temp);
+                        break;
+                    }
+
+                    if(temp.contains("ok")) {
+
+                        try {
+                            Thread.sleep(1);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+
+                        gcodeReader.setOKfromPrinter(true);
+
+                        String gcode = gcodeReader.getNextGcode();
+                        if(gcode != null) {
+                            Log.d(TAG, "Response: " + temp);
+                            Log.d(TAG, gcode);
+
+                            usbService.write(gcode.getBytes());
+                        }
+
+                        temp = "";
+                    }
                     break;
             }
         }
