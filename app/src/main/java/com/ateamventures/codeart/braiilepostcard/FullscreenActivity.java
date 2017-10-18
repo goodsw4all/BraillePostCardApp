@@ -7,6 +7,8 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.graphics.Typeface;
+import android.os.AsyncTask;
+import android.os.Environment;
 import android.os.IBinder;
 import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
@@ -21,7 +23,12 @@ import android.widget.Toast;
 
 import com.dd.CircularProgressButton;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.lang.ref.WeakReference;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.Set;
 
 /**
@@ -36,6 +43,7 @@ public class FullscreenActivity extends AppCompatActivity {
     private CircularProgressButton mSendButton;
     private CircularProgressButton mDownButton;
     static final String TAG = "MW";
+    private CircularProgressButton mPrintButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,6 +65,9 @@ public class FullscreenActivity extends AppCompatActivity {
 
         mDownButton = (CircularProgressButton) findViewById(R.id.downloadButton);
         mDownButton.setIndeterminateProgressMode(true);
+
+        mPrintButton = (CircularProgressButton) findViewById(R.id.printButton);
+        mPrintButton.setIndeterminateProgressMode(true);
 
         Typeface type = Typeface.createFromAsset(getAssets(),"fonts/Sheets_Braille.ttf");
         mBraille.setTypeface(type);
@@ -84,7 +95,7 @@ public class FullscreenActivity extends AppCompatActivity {
                 usbService.write("Hello".getBytes());
 
                 BrailleRequest test = new BrailleRequest();
-                test.sendRequsest("http://localhost:8080/hello");
+                test.sendRequsest("http://192.168.1.37:8080/api/json");
 
                 if (mSendButton.getProgress() == 0) {
                     mSendButton.setProgress(100);
@@ -96,14 +107,23 @@ public class FullscreenActivity extends AppCompatActivity {
             }
         });
 
+
         mDownButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                new GcodeDownload().execute("http://192.168.1.37:8080/braillePostCard.gcode");
+
+            }
+        });
+
+        mPrintButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 usbService.write("M105\n".getBytes());
                 usbService.write("M105\n".getBytes());
 
                 gcodeReader.startGCodeReadThread();
-                mDownButton.setProgress(100);
+                mPrintButton.setProgress(100);
             }
         });
 
@@ -269,5 +289,72 @@ public class FullscreenActivity extends AppCompatActivity {
         filter.addAction(UsbService.ACTION_USB_PERMISSION_NOT_GRANTED);
         registerReceiver(mUsbReceiver, filter);
     }
+
+    private class GcodeDownload extends AsyncTask<String, Void, Void> {
+        private String fileName;
+        File sdcard = Environment.getExternalStorageDirectory();
+        private final String SAVE_FOLDER = "/Download";
+
+        @Override
+        protected Void doInBackground(String... params)  {
+            String savePath = Environment.getExternalStorageDirectory().toString() + SAVE_FOLDER;
+
+            fileName = "braillePostCard.gcode";
+            String fileUrl = params[0];
+
+            Log.d(TAG, "doInBackground: " + fileUrl);
+
+            String localPath = savePath + "/" + fileName;
+            File oldFile = new File(localPath);
+            if (oldFile.exists() == true) {
+                oldFile.delete();
+            }
+
+            try {
+                URL imgUrl = new URL(fileUrl);
+                HttpURLConnection conn = (HttpURLConnection)imgUrl.openConnection();
+                int len = conn.getContentLength();
+                byte[] tmpByte = new byte[len];
+
+                byte[] buffer = new byte[1024];
+
+                Log.d(TAG, "doInBackground: len " + len );
+
+                InputStream is = conn.getInputStream();
+
+                File file = new File(localPath);
+                FileOutputStream fos = new FileOutputStream(file);
+
+                int read;
+                for (;;) {
+                    read = is.read(buffer);
+                    Log.d(TAG, "doInBackground: read " + read );
+                    if (read <= 0) {
+                        break;
+                    }
+                    fos.write(buffer, 0, read); //file 생성
+                }
+                is.close();
+                fos.close();
+                conn.disconnect();
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return null;
+
+        }
+
+
+        @Override
+        protected void onPostExecute(Void result) {
+
+            super.onPostExecute(result);
+            Log.d(TAG, "onPostExecute: filedownload done " + result );
+
+        }
+
+    }
+
     //------------------------------------------------------------------------------------------->
 }
