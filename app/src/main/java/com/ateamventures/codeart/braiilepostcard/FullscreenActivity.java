@@ -37,6 +37,7 @@ import java.util.Set;
  */
 public class FullscreenActivity extends AppCompatActivity {
 
+    public static final String braillRequestUrl = "http://192.168.1.37:8080/api/json";
     private View mDecorView;
     private EditText mPlainText;
     private EditText mBraille;
@@ -44,6 +45,12 @@ public class FullscreenActivity extends AppCompatActivity {
     private CircularProgressButton mDownButton;
     static final String TAG = "MW";
     private CircularProgressButton mPrintButton;
+    private String mGcodeUrl;
+
+
+    public interface BrailleRequestCallBack {
+        void convertComplete();
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -92,13 +99,22 @@ public class FullscreenActivity extends AppCompatActivity {
         mSendButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                usbService.write("Hello".getBytes());
+                BrailleRequestCallBack cb = new BrailleRequestCallBack() {
+                    @Override
+                    public void convertComplete() {
+                        mSendButton.setProgress(100);
+                    }
+                };
 
-                BrailleRequest test = new BrailleRequest();
-                test.sendRequsest("http://192.168.1.37:8080/api/json");
+                BrailleRequest brailleRequest = new BrailleRequest();
+                brailleRequest.registerCallBack(cb);
+
+                brailleRequest.sendRequsest(braillRequestUrl, mPlainText.toString());
+
+                mGcodeUrl = brailleRequest.getGcodeUrl();
 
                 if (mSendButton.getProgress() == 0) {
-                    mSendButton.setProgress(100);
+                    mSendButton.setProgress(50);
                 } else if (mSendButton.getProgress() == -1) {
                     mSendButton.setProgress(0);
                 } else {
@@ -111,8 +127,11 @@ public class FullscreenActivity extends AppCompatActivity {
         mDownButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                new GcodeDownload().execute("http://192.168.1.37:8080/braillePostCard.gcode");
-
+                Log.d(TAG, "onClick: " + mGcodeUrl);
+                mDownButton.setProgress(0);
+                if (mGcodeUrl==null)
+                    mGcodeUrl="http://192.168.1.37:8080/braillePostCard.gcode";
+                new GcodeDownload().execute(mGcodeUrl);
             }
         });
 
@@ -129,8 +148,6 @@ public class FullscreenActivity extends AppCompatActivity {
 
         mHandler = new MyHandler(this);
     }
-
-
 
     @Override
     protected void onResume() {
@@ -153,6 +170,16 @@ public class FullscreenActivity extends AppCompatActivity {
         // Trigger the initial hide() shortly after the activity has been
         // created, to briefly hint to the user that UI controls
         // are available.
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        Intent intent = new Intent(
+                getApplicationContext(),//현재제어권자
+                UsbService.class); //
+
+        stopService(intent);
     }
 
     //<-------------------------------------------------------------------------------------------
@@ -350,7 +377,8 @@ public class FullscreenActivity extends AppCompatActivity {
         protected void onPostExecute(Void result) {
 
             super.onPostExecute(result);
-            Log.d(TAG, "onPostExecute: filedownload done " + result );
+            Log.d(TAG, "onPostExecute: filedownload done ");
+            mDownButton.setProgress(100);
 
         }
 

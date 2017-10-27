@@ -7,22 +7,35 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
-import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.net.URLEncoder;
 
 /**
  * Created by codeart on 21/09/2017.
  */
 
 public class BrailleRequest {
+
+    public static final String serverUrl = "http://192.168.1.37:8080";
+    String mGcodeUrl = "";
+    private static final String TAG = "BrailleRequest";
+    private FullscreenActivity.BrailleRequestCallBack mCallBack;
+
+    public String getGcodeUrl() {
+        return mGcodeUrl;
+    }
+    public void registerCallBack(FullscreenActivity.BrailleRequestCallBack cb) {
+        mCallBack = cb;
+    }
+
+    private void setGcodeUrl(String url) {
+        mGcodeUrl = serverUrl + url;
+    }
+
 
     private class httpRequest extends AsyncTask<String, Void, String> {
 
@@ -32,18 +45,25 @@ public class BrailleRequest {
                 JSONObject jsonObject = getJSONObjectFromURL("http://192.168.1.37:8080/api/json");
                 //
                 // Parse your json here
-                //
-                Log.e("TEST", "doInBackground: "+ jsonObject.toString() + " " + params[0]);
+                // Get your url
+
+                String url = jsonObject.getString("gcodeURL");
+                setGcodeUrl(url);
+
+                Log.e(TAG, "doInBackground: "+ jsonObject.toString() + " " + params[0] +" " + params[1]);
+                Log.d(TAG, "---Gcode "+ url);
             } catch (IOException e) {
                 e.printStackTrace();
             } catch (JSONException e) {
                 e.printStackTrace();
             }
+
             return "Executed";
         }
 
         @Override
         protected void onPostExecute(String result) {
+            mCallBack.convertComplete();
         }
 
         @Override
@@ -83,12 +103,6 @@ public class BrailleRequest {
                     "    \"address\": \"happy world\"\n" +
                     "  },\n" +
                     message +
-                    "  \"number\": 123,\n" +
-                    "  \"object\": {\n" +
-                    "    \"a\": \"b\",\n" +
-                    "    \"c\": \"d\",\n" +
-                    "    \"e\": \"f\"\n" +
-                    "  }\n" +
                     "}";
 
             //Send request
@@ -126,8 +140,7 @@ public class BrailleRequest {
 
     }
 
-    public void sendRequsest(String urlString) {
-        new httpRequest().execute(urlString);
+    public void sendRequsest(String... params) {
+        new httpRequest().execute(params);
     }
 }
-

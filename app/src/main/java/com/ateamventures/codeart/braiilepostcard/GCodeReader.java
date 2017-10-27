@@ -48,13 +48,8 @@ public class GCodeReader {
     }
 
     public String extractGcode(String line) {
-
-
-        if (line.length() > 0 ) {
-            //if (line.charAt(0) != 'M' && line.charAt(0) != 'G') {
-            if (Character.isAlphabetic(line.charAt(0)) == false) {
+        if (line.length() <= 0 || !Character.isAlphabetic(line.charAt(0)) ) {
                 return null;
-            }
         }
 
         System.out.println(line);
@@ -79,12 +74,8 @@ public class GCodeReader {
                 e.printStackTrace();
             }
 
-            while (true) {
-
+            while (OKfromPrinter) {
                 String line;
-                if (!OKfromPrinter) {
-                    continue;
-                }
 
                 try {
                     if ((line = br.readLine()) != null) {
@@ -109,6 +100,4 @@ public class GCodeReader {
 
         }
     }
-
-
 }
