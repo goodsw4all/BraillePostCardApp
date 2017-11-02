@@ -109,7 +109,8 @@ public class FullscreenActivity extends AppCompatActivity {
                 BrailleRequest brailleRequest = new BrailleRequest();
                 brailleRequest.registerCallBack(cb);
 
-                brailleRequest.sendRequsest(braillRequestUrl, mPlainText.toString());
+                Log.d(TAG, "onClick: " + mPlainText.getText().toString());
+                brailleRequest.sendRequsest(braillRequestUrl, mPlainText.getText().toString());
 
                 mGcodeUrl = brailleRequest.getGcodeUrl();
 
@@ -146,7 +147,7 @@ public class FullscreenActivity extends AppCompatActivity {
             }
         });
 
-        mHandler = new MyHandler(this);
+        mHandler = new UsbHandler(this);
     }
 
     @Override
@@ -160,8 +161,6 @@ public class FullscreenActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         super.onPause();
-        unregisterReceiver(mUsbReceiver);
-        unbindService(usbConnection);
     }
 
     @Override
@@ -175,11 +174,16 @@ public class FullscreenActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+
+        unregisterReceiver(mUsbReceiver);
+        unbindService(usbConnection);
+
         Intent intent = new Intent(
                 getApplicationContext(),//현재제어권자
                 UsbService.class); //
 
         stopService(intent);
+
     }
 
     //<-------------------------------------------------------------------------------------------
@@ -211,7 +215,7 @@ public class FullscreenActivity extends AppCompatActivity {
     };
 
     private static UsbService usbService;
-    private MyHandler mHandler;
+    private UsbHandler mHandler;
 
     private static GCodeReader gcodeReader = new GCodeReader("Download/braillePostCard.gcode");
 
@@ -231,12 +235,12 @@ public class FullscreenActivity extends AppCompatActivity {
     /*
      * This handler will be passed to UsbService. Data received from serial port is displayed through this handler
      */
-    private static class MyHandler extends Handler {
+    private static class UsbHandler extends Handler {
 
         private final WeakReference<FullscreenActivity> mActivity;
         private String temp = "";
 
-        public MyHandler(FullscreenActivity activity) {
+        public UsbHandler(FullscreenActivity activity) {
             mActivity = new WeakReference<>(activity);
         }
 
@@ -265,6 +269,8 @@ public class FullscreenActivity extends AppCompatActivity {
                         Log.d(TAG, "handleMessage: temp " + temp);
                         break;
                     }
+
+                    //TODO : Get Ready
 
                     if(temp.contains("ok")) {
 

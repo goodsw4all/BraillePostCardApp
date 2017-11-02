@@ -13,6 +13,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.Scanner;
 
 /**
  * Created by codeart on 21/09/2017.
@@ -20,7 +21,6 @@ import java.net.URL;
 
 public class BrailleRequest {
 
-    public static final String serverUrl = "http://192.168.1.37:8080";
     String mGcodeUrl = "";
     private static final String TAG = "BrailleRequest";
     private FullscreenActivity.BrailleRequestCallBack mCallBack;
@@ -33,21 +33,45 @@ public class BrailleRequest {
     }
 
     private void setGcodeUrl(String url) {
-        mGcodeUrl = serverUrl + url;
+        mGcodeUrl = "http://192.168.1.37:8080" + url;
     }
 
 
+    private String convertedMessage2JSON(String message)
+    {
+        String convertedMessage = "\"message\": [\"i\", \"test\", \"Braille\"],\n";
+        boolean isFirstLine = true;
+        String start = "\"message\": [";
+        String end   = "],\n";
+        convertedMessage = start;
+        Scanner scanner = new Scanner(message);
+        while (scanner.hasNextLine()) {
+            String line = scanner.nextLine();
+            if (!isFirstLine)
+                convertedMessage += ",";
+            else
+                isFirstLine = false;
+            convertedMessage += "\"" + line  + "\"";
+        }
+        scanner.close();
+        convertedMessage += end;
+        return convertedMessage;
+    }
     private class httpRequest extends AsyncTask<String, Void, String> {
 
         @Override
         protected String doInBackground(String... params) {
-            try{
-                JSONObject jsonObject = getJSONObjectFromURL("http://192.168.1.37:8080/api/json");
+            try {
+                String convertedMessage = convertedMessage2JSON(params[1]);
+                
+                JSONObject jsonObject = sendJSONRequest(params[0], convertedMessage);
                 //
                 // Parse your json here
                 // Get your url
 
-                String url = jsonObject.getString("gcodeURL");
+                String url = null; // = jsonObject.getString("gcodeURL");
+                if(url == null)
+                    url="/BraillePostCard.gcode";
                 setGcodeUrl(url);
 
                 Log.e(TAG, "doInBackground: "+ jsonObject.toString() + " " + params[0] +" " + params[1]);
@@ -74,7 +98,7 @@ public class BrailleRequest {
     }
 
 
-    public JSONObject getJSONObjectFromURL(String urlString) throws IOException, JSONException {
+    public JSONObject sendJSONRequest(String urlString, String message) throws IOException, JSONException {
 
         URL url;
         HttpURLConnection connection = null;
@@ -84,13 +108,16 @@ public class BrailleRequest {
             connection = (HttpURLConnection)url.openConnection();
             connection.setRequestMethod("POST");
             connection.setRequestProperty("Content-Type", "application/json");
-            connection.setConnectTimeout(1500);
+            //connection.setConnectTimeout(90000);
 
             connection.setUseCaches (false);
             connection.setDoInput(true);
             connection.setDoOutput(true);
 
-            String message = "\"message\": [\"i\", \"test\", \"you\"],\n";
+            //TODO : get message
+            Log.d(TAG, "sendJSONRequest: "  + message);
+//            message = "\"message\": [\"i\", \"test\", \"Braille\"],\n";
+//            Log.d(TAG, "sendJSONRequest: "  + message);
 
             String rawString = "{\n" +
                     "  \"title\": \"Hello Braille Postcard Project\",\n" +
@@ -103,6 +130,12 @@ public class BrailleRequest {
                     "    \"address\": \"happy world\"\n" +
                     "  },\n" +
                     message +
+                    "  \"number\": 1,\n" +
+                    "  \"reserved\": {\n" +
+                    "    \"0\": \"b\",\n" +
+                    "    \"1\": \"d\",\n" +
+                    "    \"2\": \"f\"\n" +
+                    "  }\n" +
                     "}";
 
             //Send request
@@ -141,6 +174,7 @@ public class BrailleRequest {
     }
 
     public void sendRequsest(String... params) {
+        Log.e(TAG, "sendRequest: "+ " " + params[0] +" " + params[1]);
         new httpRequest().execute(params);
     }
 }
