@@ -33,7 +33,7 @@ public class BrailleRequest {
     }
 
     private void setGcodeUrl(String url) {
-        mGcodeUrl = "http://192.168.1.37:8080" + url;
+        mGcodeUrl = "http://192.168.1.23:8080" + url;
     }
 
 
@@ -69,13 +69,15 @@ public class BrailleRequest {
                 // Parse your json here
                 // Get your url
 
-                String url = null; // = jsonObject.getString("gcodeURL");
-                if(url == null)
-                    url="/BraillePostCard.gcode";
-                setGcodeUrl(url);
+                String url = "/upload/braillePostCard.gcode";
 
-                Log.e(TAG, "doInBackground: "+ jsonObject.toString() + " " + params[0] +" " + params[1]);
-                Log.d(TAG, "---Gcode "+ url);
+                if(jsonObject != null) {
+                    Log.e(TAG, "doInBackground: " + jsonObject.toString() + " " + params[0] + " " + params[1]);
+                    url = jsonObject.getString("gcodeURL");
+                }
+                setGcodeUrl(url);
+                Log.d(TAG, "---Gcode "+ mGcodeUrl);
+
             } catch (IOException e) {
                 e.printStackTrace();
             } catch (JSONException e) {

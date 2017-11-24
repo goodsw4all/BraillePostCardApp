@@ -37,19 +37,28 @@ import java.util.Set;
  */
 public class FullscreenActivity extends AppCompatActivity {
 
-    public static final String braillRequestUrl = "http://192.168.1.37:8080/api/json";
+    public static final String braillRequestUrl = "http://192.168.1.23:8080/api/json";
     private View mDecorView;
     private EditText mPlainText;
     private EditText mBraille;
     private CircularProgressButton mSendButton;
     private CircularProgressButton mDownButton;
-    static final String TAG = "MW";
+    static final String TAG = "FullscreenActivity";
     private CircularProgressButton mPrintButton;
     private String mGcodeUrl;
 
+    BrailleRequest brailleRequest = new BrailleRequest();
+
+    private final String M105 = "M105/n";
+    public static Boolean mPrinterReady = false;
 
     public interface BrailleRequestCallBack {
         void convertComplete();
+    }
+
+    private void sayHi2Printer() {
+        Log.d(TAG, "sayHi2Printer ++: ");
+        usbService.write(M105.getBytes());
     }
 
     @Override
@@ -67,6 +76,7 @@ public class FullscreenActivity extends AppCompatActivity {
 
         mBraille = (EditText) findViewById(R.id.Braille);
         mPlainText = (EditText) findViewById(R.id.PlainText);
+
         mSendButton = (CircularProgressButton) findViewById(R.id.sendButton);
         mSendButton.setIndeterminateProgressMode(true);
 
@@ -99,28 +109,11 @@ public class FullscreenActivity extends AppCompatActivity {
         mSendButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                BrailleRequestCallBack cb = new BrailleRequestCallBack() {
-                    @Override
-                    public void convertComplete() {
-                        mSendButton.setProgress(100);
-                    }
-                };
-
-                BrailleRequest brailleRequest = new BrailleRequest();
-                brailleRequest.registerCallBack(cb);
 
                 Log.d(TAG, "onClick: " + mPlainText.getText().toString());
                 brailleRequest.sendRequsest(braillRequestUrl, mPlainText.getText().toString());
 
-                mGcodeUrl = brailleRequest.getGcodeUrl();
-
-                if (mSendButton.getProgress() == 0) {
-                    mSendButton.setProgress(50);
-                } else if (mSendButton.getProgress() == -1) {
-                    mSendButton.setProgress(0);
-                } else {
-                    mSendButton.setProgress(-1);
-                }
+                mSendButton.setProgress(50);
             }
         });
 
@@ -129,10 +122,14 @@ public class FullscreenActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 Log.d(TAG, "onClick: " + mGcodeUrl);
+
                 mDownButton.setProgress(0);
+                mGcodeUrl =  brailleRequest.getGcodeUrl();
                 if (mGcodeUrl==null)
-                    mGcodeUrl="http://192.168.1.37:8080/braillePostCard.gcode";
+                    mGcodeUrl="http://192.168.1.23:8080/files/braillePostCard.gcode";
                 new GcodeDownload().execute(mGcodeUrl);
+
+                mDownButton.setProgress(50);
             }
         });
 
@@ -140,14 +137,18 @@ public class FullscreenActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 usbService.write("M105\n".getBytes());
-                usbService.write("M105\n".getBytes());
-
-                gcodeReader.startGCodeReadThread();
-                mPrintButton.setProgress(100);
             }
         });
 
         mHandler = new UsbHandler(this);
+
+        BrailleRequestCallBack cb = new BrailleRequestCallBack() {
+            @Override
+            public void convertComplete() {
+                mSendButton.setProgress(100);
+            }
+        };
+        brailleRequest.registerCallBack(cb);
     }
 
     @Override
@@ -155,6 +156,8 @@ public class FullscreenActivity extends AppCompatActivity {
         super.onResume();
         setFilters();  // Start listening notifications from UsbService
         startService(UsbService.class, usbConnection, null); // Start UsbService(if it was not started before) and Bind it
+
+       gcodeReader.startGCodeReadThread();
 
     }
 
@@ -197,6 +200,7 @@ public class FullscreenActivity extends AppCompatActivity {
             switch (intent.getAction()) {
                 case UsbService.ACTION_USB_PERMISSION_GRANTED: // USB PERMISSION GRANTED
                     Toast.makeText(context, "USB Ready", Toast.LENGTH_SHORT).show();
+                    Log.d(TAG, "onReceive: USB READY");
                     break;
                 case UsbService.ACTION_USB_PERMISSION_NOT_GRANTED: // USB PERMISSION NOT GRANTED
                     Toast.makeText(context, "USB Permission not granted", Toast.LENGTH_SHORT).show();
@@ -263,6 +267,8 @@ public class FullscreenActivity extends AppCompatActivity {
                 case UsbService.SYNC_READ:
                     String buffer = (String) msg.obj;
 
+                    Log.d(TAG, "handleMessage: SYNC_READ " + buffer);
+
                     temp += buffer;
 
                     if (temp.charAt(temp.length()-1) != '\n') {
@@ -271,20 +277,27 @@ public class FullscreenActivity extends AppCompatActivity {
                     }
 
                     //TODO : Get Ready
+//                    if (true) {
+//                        Log.d(TAG, "handleMessage: " + "Check Printer");
+//                        if(temp.contains("ok")) {
+//                            mPrinterReady = true;
+//                            Log.d(TAG, "handleMessage: " + "OK");
+//                        }
+//
+//                        break;
+//                    }
 
                     if(temp.contains("ok")) {
 
+                        gcodeReader.setOKfromPrinter(true);
+
                         try {
-                            Thread.sleep(1);
+                            Thread.sleep(100);
                         } catch (InterruptedException e) {
                             e.printStackTrace();
                         }
-
-                        gcodeReader.setOKfromPrinter(true);
-
                         String gcode = gcodeReader.getNextGcode();
                         if(gcode != null) {
-                            Log.d(TAG, "Response: " + temp);
                             Log.d(TAG, gcode);
 
                             usbService.write(gcode.getBytes());
@@ -335,7 +348,6 @@ public class FullscreenActivity extends AppCompatActivity {
             fileName = "braillePostCard.gcode";
             String fileUrl = params[0];
 
-            Log.d(TAG, "doInBackground: " + fileUrl);
 
             String localPath = savePath + "/" + fileName;
             File oldFile = new File(localPath);
@@ -343,15 +355,17 @@ public class FullscreenActivity extends AppCompatActivity {
                 oldFile.delete();
             }
 
+            Log.d(TAG, "GcodeDownload doInBackground: " + fileUrl + "====>");
             try {
                 URL imgUrl = new URL(fileUrl);
+                Log.d(TAG, "GcodeDownload doInBackground: len " + " " + fileUrl );
                 HttpURLConnection conn = (HttpURLConnection)imgUrl.openConnection();
                 int len = conn.getContentLength();
                 byte[] tmpByte = new byte[len];
 
-                byte[] buffer = new byte[1024];
+                byte[] buffer = new byte[8192];
 
-                Log.d(TAG, "doInBackground: len " + len );
+                Log.d(TAG, "GcodeDownload doInBackground: len " + len + " " + fileUrl );
 
                 InputStream is = conn.getInputStream();
 
@@ -361,7 +375,7 @@ public class FullscreenActivity extends AppCompatActivity {
                 int read;
                 for (;;) {
                     read = is.read(buffer);
-                    Log.d(TAG, "doInBackground: read " + read );
+                    Log.d(TAG, "GcodeDownload doInBackground: read " + read );
                     if (read <= 0) {
                         break;
                     }
@@ -375,7 +389,6 @@ public class FullscreenActivity extends AppCompatActivity {
                 e.printStackTrace();
             }
             return null;
-
         }
 
 

@@ -20,14 +20,14 @@ public class GCodeReader {
     //Get the text file
     File file;
     static Boolean OKfromPrinter = true;
-    static final String TAG = "MW";
+    static final String TAG = "GCodeReader";
 
     StringBuilder text = new StringBuilder();
     String nextGcode;
 
     public GCodeReader(String path) {
-        file = new File(sdcard, "Download/waggleLogo_noheat.gcode");
-        OKfromPrinter = true;
+        file = new File(sdcard, "Download/braillePostCard.gcode");
+        OKfromPrinter = false;
         Log.d(TAG, "GCodeReader: " + file.getAbsolutePath());
     }
 
@@ -35,8 +35,10 @@ public class GCodeReader {
         new GcodeReadThread().start();
     }
 
-    public static void setOKfromPrinter(Boolean OKfromPrinter) {
-        GCodeReader.OKfromPrinter = OKfromPrinter;
+    public static void setOKfromPrinter(Boolean OK) {
+        OKfromPrinter = OK;
+        //Log.d(TAG, "setOKfromPrinter: " + OK);
+
     }
 
     public String getNextGcode() {
@@ -52,8 +54,6 @@ public class GCodeReader {
                 return null;
         }
 
-        System.out.println(line);
-
         int indexOfsemicollon = line.indexOf(';');
 
         if(indexOfsemicollon == -1) {
@@ -68,26 +68,44 @@ public class GCodeReader {
         public void run() {
 
             BufferedReader br = null;
+            int linecount = 0;
             try {
                 br = new BufferedReader(new FileReader(file));
             } catch (FileNotFoundException e) {
                 e.printStackTrace();
             }
 
-            while (OKfromPrinter) {
+            while (true) {
+
+                if(!OKfromPrinter) {
+                    try {
+                        Thread.sleep(1);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+
+                    continue;
+
+                }
+
                 String line;
 
                 try {
                     if ((line = br.readLine()) != null) {
                         String temp = extractGcode(line);
-                        if (temp == null)
+                        linecount++;
+
+                        if (temp == null) {
+                            setNextGcode(null);
                             continue;
-                        ;
+                        }
                         setNextGcode(temp + " \n");
                         OKfromPrinter = false;
-                    } else {
 
-                        Log.d(TAG, "run: File Read is done");
+                        Log.d(TAG, "run: Gcode "+ linecount + " " + nextGcode);
+
+                    } else {
+                        Log.d(TAG, "run: Gcode File reading is done");
                         setNextGcode(null);
                         br.close();
                         break;
