@@ -1,5 +1,5 @@
 # BraillePostCardApp
-Android app for 3D Printing Braille 
+Android app for 3D Printing Braille. <br>
 This project start again when I purchase a new printer.
 
 * Project Description
